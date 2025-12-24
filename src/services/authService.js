@@ -7,10 +7,14 @@ const BASE_URL = `${import.meta.env.VITE_BACK_END_SERVER_URL}`;
 
 const signUp = async (formData) => {
   try {
+    // New code to extract only the fields expected by UserSchema in backend
+    const { username, email, password } = formData;
+
     const res = await fetch(`${BASE_URL}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
+      // Changed to send only specific fields to avoid 400 Bad Request
+      body: JSON.stringify({ username, email, password }),
     });
 
     const data = await res.json();
@@ -62,3 +66,26 @@ export {
   signUp, signIn
 };
 
+const USERS_BASE_URL = `${import.meta.env.VITE_BACK_END_SERVER_URL}/users`;
+const headers = { Authorization: `Bearer ${localStorage.getItem('token')}` }
+
+export const index = async () => {
+   try {
+    const res = await fetch(`${USERS_BASE_URL}/`, {
+      method: 'GET',
+      headers
+    });
+
+    const data = await res.json();
+
+    if (data.err) {
+      throw new Error(data.err);
+    }
+
+    console.log(data)
+    return data
+  } catch (err) {
+    console.log(err);
+    throw new Error(err);
+  }
+}

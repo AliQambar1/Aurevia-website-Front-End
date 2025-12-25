@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { createListing } from '../../services/listingService';
 import { useNavigate } from 'react-router';
-import { cloudinaryUploadUrl } from '../../services/cloudinaryService';
-
+import { createListing } from '../../services/listingService';
+import {
+  cloudinaryUploadUrl,
+  uploadPreset
+} from '../../services/cloudinaryService';
 
 const ListingForm = ({ onSuccess }) => {
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     make: '',
     model_year: '',
-    mileage: '', 
+    mileage: '',
     spec: 'GCC',
     exterior: '',
     interior: '',
@@ -17,145 +20,167 @@ const ListingForm = ({ onSuccess }) => {
     notes: '',
     status: 'Available'
   });
-  
-  const [selectedFiles, setSelectedFiles] = useState(null);
-  const [isUploading, setIsUploading] = useState(false); 
+
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   const handleFileChange = (e) => {
-    setSelectedFiles(e.target.files);
+    setSelectedFiles(Array.from(e.target.files));
   };
 
+  // Upload ONE image to Cloudinary
   const handleUpload = async (file) => {
-    if (!file) return;
-    setIsUploading(true)
-    // setSelectedStatus(false);
+    const data = new FormData();
+    data.append('file', file);
+    data.append('upload_preset', uploadPreset);
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', uploadPreset);
+    const response = await fetch(cloudinaryUploadUrl, {
+      method: 'POST',
+      body: data
+    });
 
-    try {
-      const response = await fetch(cloudinaryUploadUrl, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("File upload failed");
-      }
-
-      const result = await response.json();
-      const fileCloudinaryURL = result.secure_url;
-      console.log("File uploaded successfully:", fileCloudinaryURL);
-
-    //   setUploadStatus({ ...uploadStatus, isUploading: false, success: true });
-    setIsUploading(false)
-    setSelectedFiles(null);
-    return fileCloudinaryURL
-} catch (error) {
-    setIsUploading(false)
-    console.error("Error uploading file:", error);
-    //   setUploadStatus({ ...uploadStatus, isUploading: false, success: false });
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Cloudinary error:', errorData);
+      throw new Error(`Cloudinary upload failed: ${errorData.error?.message || 'Unknown error'}`);
     }
-  }; 
+
+    const result = await response.json();
+    return result.secure_url;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg(null);
-    setIsUploading(true); 
+    setIsUploading(true);
 
     try {
-      const dataPayload = new FormData();
-      let imageUrl = ''
-     
-      if (selectedFiles && selectedFiles.length > 0) {
-        // const uploadPromises = Array.from(selectedFiles).map(file => 
-        //   handleUpload(file)
-        // );
+      // Upload all images to Cloudinary first
+      console.log('Uploading images to Cloudinary...');
+      const imageUrls = await Promise.all(
+        selectedFiles.map(file => handleUpload(file))
+      );
+      console.log('Images uploaded:', imageUrls);
 
-        // Wait for all images to finish uploading
-        // const imageUrls = await Promise.all(uploadPromises);
+      // Build payload for FastAPI
+      const payload = new FormData();
+      payload.append('make', formData.make);
+      payload.append('model_year', formData.model_year);
+      payload.append('mileage', formData.mileage);
+      payload.append('spec', formData.spec);
+      payload.append('exterior', formData.exterior);
+      payload.append('interior', formData.interior);
+      payload.append('price', formData.price);
+      payload.append('status', formData.status);
 
-        // Append the resulting URL strings to dataPayload
-        // imageUrls.forEach(url => {
-        //   dataPayload.append('image_urls', url); 
-        // });
+  
+      payload.append('images', JSON.stringify(imageUrls));
 
-        imageUrl = await handleUpload(selectedFiles)
+      if (formData.notes) {
+        payload.append('notes', formData.notes);
       }
 
-      // 2. Append standard text fields
-      dataPayload.append('make', formData.make);
-      dataPayload.append('model_year', parseInt(formData.model_year));
-      dataPayload.append('mileage', parseInt(formData.mileage || 0));
-      dataPayload.append('spec', formData.spec);
-      dataPayload.append('exterior', formData.exterior);
-      dataPayload.append('interior', formData.interior);
-      dataPayload.append('price', parseFloat(formData.price));
-      dataPayload.append('status', formData.status);
-      dataPayload.append('images', imageUrl);
-      if (formData.notes) dataPayload.append('notes', formData.notes);
+      // 3️⃣ Save listing to backend
+      console.log('Saving listing to backend...');
+      await createListing(payload);
 
-      //final payload to your FastAPI Backend
-      await createListing(dataPayload);
-      
+      console.log('Listing saved successfully!');
       if (onSuccess) onSuccess();
-    //   window.location.reload(); 
       navigate('/');
-      setIsUploading(false);
-    // use the react router to navigate to a different page 
-    } catch (err) {
-      console.error("Submission Error:", err);
-      setErrorMsg("Failed to upload images or save listing. Please try again.");
+    } catch (error) {
+      console.error('Error details:', error);
+      setErrorMsg(
+        error.message || 'Failed to upload images or save listing. Please try again.'
+      );
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '500px' }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '500px' }}
+    >
       <h3>Add New Car</h3>
-      
-      <input name="make" placeholder="Make" onChange={handleChange} required />
-      
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <input name="model_year" type="number" placeholder="Year" onChange={handleChange} required style={{flex: 1}} />
-        <input name="mileage" type="number" placeholder="Mileage (km)" onChange={handleChange} required style={{flex: 1}} />
-      </div>
 
-      <label>Specification:</label>
-      <select name="spec" onChange={handleChange} value={formData.spec}>
+      <input name="make" placeholder="Make" onChange={handleChange} required />
+
+      <input
+        name="model_year"
+        type="number"
+        placeholder="Year"
+        onChange={handleChange}
+        required
+      />
+
+      <input
+        name="mileage"
+        type="number"
+        placeholder="Mileage"
+        onChange={handleChange}
+        required
+      />
+
+      <select name="spec" value={formData.spec} onChange={handleChange}>
         <option value="GCC">GCC</option>
         <option value="US">US</option>
         <option value="EU">EU</option>
       </select>
 
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <input name="exterior" placeholder="Exterior Color" onChange={handleChange} required style={{flex: 1}} />
-        <input name="interior" placeholder="Interior Color" onChange={handleChange} required style={{flex: 1}} />
-      </div>
+      <input
+        name="exterior"
+        placeholder="Exterior Color"
+        onChange={handleChange}
+        required
+      />
 
-      <input name="price" type="number" placeholder="Price" onChange={handleChange} required />
-      
-      <label>Car Images:</label>
-      <input type="file" multiple onChange={handleFileChange} accept="image/*" required />
+      <input
+        name="interior"
+        placeholder="Interior Color"
+        onChange={handleChange}
+        required
+      />
 
-      <textarea name="notes" placeholder="Additional Notes" onChange={handleChange} />
+      <input
+        name="price"
+        type="number"
+        placeholder="Price"
+        onChange={handleChange}
+        required
+      />
 
-      <button 
-        type="submit" 
+      <input
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={handleFileChange}
+        required
+      />
+
+      <textarea
+        name="notes"
+        placeholder="Additional Notes"
+        onChange={handleChange}
+      />
+
+      <button
+        type="submit"
         disabled={isUploading}
-        style={{ 
-          backgroundColor: isUploading ? '#ccc' : '#28a745', 
-          color: '#fff', 
-          padding: '10px', 
-          border: 'none', 
-          cursor: isUploading ? 'not-allowed' : 'pointer' 
+        style={{
+          backgroundColor: isUploading ? '#ccc' : '#28a745',
+          color: '#fff',
+          padding: '10px',
+          border: 'none',
+          cursor: isUploading ? 'not-allowed' : 'pointer'
         }}
       >
         {isUploading ? 'Uploading Images...' : 'Save Listing'}

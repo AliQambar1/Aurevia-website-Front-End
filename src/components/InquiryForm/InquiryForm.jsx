@@ -4,7 +4,7 @@ import { createInquiry } from '../../services/inquiryService';
 
 const InquiryForm = ({ listingId, onClose }) => {
   const [formData, setFormData] = useState({
-    full_name: '',    // Renamed from customer_name to match backend
+    full_name: '',    
     phone_number: '',
     message: ''
   });

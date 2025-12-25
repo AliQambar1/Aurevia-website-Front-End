@@ -1,38 +1,74 @@
-// src/components/NavBar/NavBar.jsx
-
-import { useContext } from 'react';
-import { Link } from 'react-router';
+import { useContext, useState, useEffect, useCallback } from 'react';
 import { UserContext } from '../../contexts/UserContext';
+import StaggeredMenu from './StaggeredMenu';
+import { getAvailableCount } from '../../services/listingService';
+import logoImg from "../../assets/logo.png"; 
 
 const NavBar = () => {
-  const { user, setUser } = useContext(UserContext);
+  const { user, handleSignout } = useContext(UserContext); 
+  const [availableCount, setAvailableCount] = useState(0);
 
-   const handleSignOut = () => {
-    localStorage.removeItem('token');
-    setUser(null);
+  // Memoized fetch function to prevent unnecessary re-renders
+  const fetchAvailableCount = useCallback(async () => {
+    try {
+      const count = await getAvailableCount();
+      setAvailableCount(count);
+    } catch (error) {
+      setAvailableCount(0); 
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAvailableCount();
+    
+    // Refresh count periodically (e.g., every 60 seconds)
+    const interval = setInterval(fetchAvailableCount, 60000);
+    return () => clearInterval(interval);
+  }, [fetchAvailableCount, user]);
+
+  // Construct menu items dynamically based on authentication state and role
+  const getMenuItems = () => {
+    if (!user) {
+      // Guest Menu
+      return [
+        { label: 'Sign In', ariaLabel: 'Sign in', link: '/sign-in' },
+        { label: 'Sign Up', ariaLabel: 'Create account', link: '/sign-up' },
+      ];
+    }
+
+    // Authenticated Menu
+    const items = [
+      { 
+        label: `Cars ${availableCount > 0 ? `(${availableCount})` : ''}`, 
+        ariaLabel: 'View cars', 
+        link: '/listings' 
+      }
+    ];
+
+    // Admin-specific items
+    if (user.role === 'admin') {
+      items.push({ label: 'Add New Car', ariaLabel: 'Add car', link: '/listings/new' });
+    }
+
+    // Sign out is always at the bottom
+    items.push({ label: 'Sign Out', ariaLabel: 'Logout', link: '#', onClick: handleSignout });
+    
+    return items;
   };
 
   return (
     <nav>
-      {user ? (
-        <ul>
-          <li>Welcome, {user.username}</li>
-          <li><Link to='/'>Dashboard</Link></li>
-          
-          {/* Only show this link if the user role is admin */}
-          {user.role === 'admin' && (
-             <li><Link to='/listings/new'>Add Car</Link></li>
-          )}
-
-          <li><Link to='/' onClick={handleSignOut}>Sign Out</Link></li>
-        </ul>
-      ) : (
-        <ul>
-          <li><Link to='/'>Home</Link></li>
-          <li><Link to='/sign-up'>Sign Up</Link></li>
-          <li><Link to='/sign-in'>Sign In</Link></li>
-        </ul>
-      )}
+      <StaggeredMenu
+        position="right"
+        colors={['#000000', '#1a1a1a']} 
+        items={getMenuItems()}
+        displaySocials={false} 
+        logoUrl={logoImg} 
+        menuButtonColor="#000000" 
+        openMenuButtonColor="#000000"
+        accentColor="#000000" 
+        isFixed={true}
+      />
     </nav>
   );
 };

@@ -1,35 +1,52 @@
 // src/contexts/UserContext.jsx
 
 import { createContext, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 const UserContext = createContext();
 
 function UserProvider({ children }) {
+  const navigate = useNavigate();
+
   const getUserFromToken = () => {
-  const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
 
-  if (!token) return null;
+    if (!token) return null;
 
-  return JSON.parse(atob(token.split('.')[1]));
-};
+    try {
+      return JSON.parse(atob(token.split('.')[1]));
+    } catch (error) {
+      console.error('Invalid token:', error);
+      localStorage.removeItem('token');
+      return null;
+    }
+  };
 
   // Create state just like you normally would in any other component
   const [user, setUser] = useState(getUserFromToken());
-  // This is the user state and the setUser function that will update it!
-  // This variable name isn't special; it's just convention to use `value`.
-  const value = { user, setUser };
+
+  // ✅ Add handleSignout function
+  const handleSignout = () => {
+    // 1. Remove token from localStorage
+    localStorage.removeItem('token');
+    
+    // 2. Clear user state
+    setUser(null);
+    
+    // 3. Navigate to home page
+    navigate('/');
+  };
+
+  const value = { user, setUser, handleSignout };
 
   return (
     <UserContext.Provider value={value}>
-      {/* The data we pass to the value prop above is now available to */}
-      {/* all the children of the UserProvider component. */}
       {children}
     </UserContext.Provider>
   );
-};
+}
 
 // When components need to use the value of the user context, they will need
 // access to the UserContext object to know which context to access.
 // Therefore, we export it here.
 export { UserProvider, UserContext };
-

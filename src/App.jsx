@@ -1,52 +1,55 @@
-// src/App.jsx
-
-import { Routes, Route } from 'react-router'; // Import React Router
+import { Routes, Route } from 'react-router'; 
 import { useContext } from 'react';
 import { UserContext } from './contexts/UserContext';
 
-// Import Layout Components
+import './index.css';
+
 import NavBar from './components/NavBar/NavBar';
 import Landing from './components/Landing/Landing';
 import Dashboard from './components/Dashboard/Dashboard';
-
-// Import Auth Components
 import SignUpForm from './components/SignUpForm/SignUpForm';
 import SignInForm from './components/SignInForm/SignInForm';
-
-// Import Feature Components
-import ListingsList from './components/ListingsList/ListingsList'; // NEW: Imported the listings gallery
+import AvailableCars from './components/AvailableCars/AvailableCars';
+import ListingForm from './components/ListingForm/ListingForm'; // Import your form
 
 const App = () => {
   const { user } = useContext(UserContext);
 
   return (
-    <>
+    <div className="app-wrapper">
       <NavBar />
+      <main className="main-content">
+        <Routes>
+          {/* Public Routes */}
+          {!user ? (
+            <Route path='/' element={<Landing />} />
+          ) : (
+            <Route path='/' element={<Dashboard />} />
+          )}
+          
+          {/* Change path to /listings to match NavBar */}
+          <Route path='/listings' element={<AvailableCars />} />
+          <Route path='/sign-up' element={<SignUpForm />} />
+          <Route path='/sign-in' element={<SignInForm />} />
 
-      <Routes>
-        {
-          user ?
-          // Routes accessible only to logged-in users
-          <>
-            <Route path='/' element={<Dashboard/>}/>
-            
-            {/* NEW: Replaced placeholder '/products' with the actual Listings gallery */}
-            <Route path='/listings' element={<ListingsList />}/> 
-            
-            <Route path='/favs' element={<h1>Favorites</h1>}/>
-            <Route path='/profile' element={<h1>{user.username}</h1>}/>
-            <Route path='/orders' element={<h1>ORDERS</h1>}/>
-          </>
-          :
-          // Routes for guests (not logged in)
-          <Route path='/' element={<Landing/>}/>
-        }
-        
-        {/* Public Routes */}
-        <Route path='/sign-up' element={<SignUpForm />} />
-        <Route path='/sign-in' element={<SignInForm />} />
-      </Routes>
-    </>
+          {/* Authenticated User Routes */}
+          {user && (
+            <>
+              <Route path='/favs' element={<h1>Favorites</h1>} />
+              <Route path='/profile' element={<h1>{user.username}</h1>} />
+            </>
+          )}
+
+          {/* Admin Specific Routes */}
+          {user && user.role === 'admin' && (
+            <Route path='/listings/new' element={<ListingForm />} />
+          )}
+
+          {/* Fallback for unauthorized access or 404 */}
+          <Route path='*' element={<h1>Page Not Found</h1>} />
+        </Routes>
+      </main>
+    </div>
   );
 };
 

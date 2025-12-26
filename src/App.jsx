@@ -10,7 +10,8 @@ import Dashboard from './components/Dashboard/Dashboard';
 import SignUpForm from './components/SignUpForm/SignUpForm';
 import SignInForm from './components/SignInForm/SignInForm';
 import AvailableCars from './components/AvailableCars/AvailableCars';
-import ListingForm from './components/ListingForm/ListingForm'; // Import your form
+import CarDetails from './components/CarDetails/CarDetails'; 
+import ListingForm from './components/ListingForm/ListingForm';
 
 const App = () => {
   const { user } = useContext(UserContext);
@@ -27,8 +28,8 @@ const App = () => {
             <Route path='/' element={<Dashboard />} />
           )}
           
-          {/* Change path to /listings to match NavBar */}
           <Route path='/listings' element={<AvailableCars />} />
+          <Route path='/listings/:id' element={<CarDetails />} /> 
           <Route path='/sign-up' element={<SignUpForm />} />
           <Route path='/sign-in' element={<SignInForm />} />
 
@@ -42,7 +43,10 @@ const App = () => {
 
           {/* Admin Specific Routes */}
           {user && user.role === 'admin' && (
-            <Route path='/listings/new' element={<ListingForm />} />
+            <>
+              <Route path='/listings/new' element={<ListingForm />} />
+              <Route path='/listings/:id/edit' element={<ListingForm />} /> 
+            </>
           )}
 
           {/* Fallback for unauthorized access or 404 */}

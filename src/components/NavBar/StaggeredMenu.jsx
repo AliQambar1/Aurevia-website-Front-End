@@ -1,5 +1,5 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Link } from 'react-router'; // ✅ Changed from 'react-router-dom' to 'react-router'
+import { Link } from 'react-router'; 
 import { gsap } from 'gsap';
 import './StaggeredMenu.css';
 
@@ -226,19 +226,3 @@ export const StaggeredMenu = ({
 
 export default StaggeredMenu;
 
-// Additional CSS fixes needed:
-// Make sure to add this to your StaggeredMenu.css:
-/*
-.staggered-menu-panel {
-  pointer-events: auto !important;
-}
-
-.sm-panel-item {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-.sm-panel-itemWrap {
-  pointer-events: auto !important;
-}
-*/

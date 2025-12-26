@@ -61,10 +61,10 @@ const AvailableCars = () => {
                 
                 <div className="car-specs">
                   <span className="spec-badge">{car.spec}</span>
-                  <span className="spec-item">🎨 {car.exterior}</span>
-                  <span className="spec-item">🪑 {car.interior}</span>
+                  <span className="spec-item">Exterior: {car.exterior}</span>
+                  <span className="spec-item">interior: {car.interior}</span>
                   {car.mileage && (
-                    <span className="spec-item">📊 {car.mileage.toLocaleString()} km</span>
+                    <span className="spec-item">Mileage: {car.mileage.toLocaleString()} km</span>
                   )}
                 </div>
 

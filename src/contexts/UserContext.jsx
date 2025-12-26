@@ -14,7 +14,16 @@ function UserProvider({ children }) {
     if (!token) return null;
 
     try {
-      return JSON.parse(atob(token.split('.')[1]));
+      const decoded = JSON.parse(atob(token.split('.')[1]));
+      console.log('🔑 Decoded token:', decoded);
+      
+      
+      return {
+        id: parseInt(decoded.sub), //  Convert string to number
+        role: decoded.role,
+        username: decoded.username || `User ${decoded.sub}`, // Fallback if no username
+        email: decoded.email
+      };
     } catch (error) {
       console.error('Invalid token:', error);
       localStorage.removeItem('token');
@@ -25,18 +34,19 @@ function UserProvider({ children }) {
   // Create state just like you normally would in any other component
   const [user, setUser] = useState(getUserFromToken());
 
-  // ✅ Add handleSignout function
+  // Add handleSignout function
   const handleSignout = () => {
     // 1. Remove token from localStorage
     localStorage.removeItem('token');
     
-    // 2. Clear user state
+    // Clear user state
     setUser(null);
     
-    // 3. Navigate to home page
+    //  Navigate to home page
     navigate('/');
   };
 
+  // Include handleSignout in the context value
   const value = { user, setUser, handleSignout };
 
   return (
@@ -46,7 +56,5 @@ function UserProvider({ children }) {
   );
 }
 
-// When components need to use the value of the user context, they will need
-// access to the UserContext object to know which context to access.
-// Therefore, we export it here.
+
 export { UserProvider, UserContext };

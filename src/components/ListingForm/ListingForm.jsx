@@ -78,7 +78,7 @@ const loadCarData = async () => {
         // Check if it's an array of characters (the bug!)
         if (car.images.length > 10 && car.images.every(item => typeof item === 'string' && item.length === 1)) {
           // It's an array of characters! Join them back
-          console.log('🔧 Fixing character array...');
+          console.log(' Fixing character array...');
           const joinedString = car.images.join('');
           console.log('Joined string:', joinedString);
           
